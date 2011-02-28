@@ -1,70 +1,111 @@
 (ns clj-msgpack.core
-  (:import (org.msgpack Packer))
-  (:use (clojure.java.io :only [input-stream])))
+  (:import (org.msgpack Packer Unpacker)
+           (org.msgpack.object ArrayType BigIntegerTypeIMPL BooleanType
+                               DoubleTypeIMPL FloatTypeIMPL IntegerType
+                               LongIntegerTypeIMPL MapType NilType
+                               RawType ShortIntegerTypeIMPL))
+  (:use (clojure.java [io :only [input-stream output-stream]])))
 
 (defprotocol Packable
   "Serialize the object to the packer."
   (pack-me [obj packer] "Serialize the object into the packer."))
 
-;; Most common clojure types get packed properly by default:
-;; Maps, Lists, Vectors, Strings, Numbers, nil, true, false, ...
-;; Handle the rest:
 (extend-protocol Packable
+
+  nil
+  (pack-me [_ packer]
+    (.pack packer nil))
   
   clojure.lang.Keyword
   (pack-me [kw packer]
-    (.pack packer (str \: (name kw))))
+    (.pack packer (str \: (name kw)))) ; not round-trippable, but
+                                       ; better than nothing.
   
   clojure.lang.Symbol
   (pack-me [sym packer]
     (.pack packer (name sym)))
 
-  clojure.lang.IPersistentSet
+  clojure.lang.Sequential
   (pack-me [s packer]
+    (.packArray packer (count s))
     (doseq [item s]
       (pack-me item packer)))
+
+  clojure.lang.IPersistentMap
+  (pack-me [m packer]
+    (.packMap packer (count m))
+    (doseq [[k v] m]
+      (pack-me k packer)
+      (pack-me v packer)))
 
   Object
   (pack-me [obj packer]
     (.pack packer obj))
-
+  
   )
 
 (defprotocol ToPacker
   (to-packer [obj]))
 
 (extend-protocol ToPacker
-  "Convert an object into an org.msgpack.Packer instance."
+  ;Convert an object into an org.msgpack.Packer instance.
   Packer
   (to-packer [p] p)
   Object
   (to-packer [obj]
-    (-> obj input-stream Packer.))
+    (-> obj output-stream Packer.))
   )
 
-(defn packer
-  "Creat an org.msgpack.Packer instance.
-   With no arguments, create an return a Packer that writes to a *out*."
-  )
+(defn packer [dest]
+  (to-packer dest))
+
+(defn pack-into
+  "Pack objects to the destination, which must be a Packer or coercible to an InputStream."
+  [dest & objs]
+  (let [p (packer dest)]
+    (doseq [obj objs]
+      (pack-me obj p))
+    p))
 
 (defn pack
   "Pack the objects into a byte array and return it."
   [& objs]
   (let [ba (java.io.ByteArrayOutputStream.)
         p (Packer. ba)]
-    (doseq [obj objs]
-      (pack-to obj p))
-    (.toByteArray s)))
+    (apply pack-into p objs)
+    (.toByteArray ba)))
 
-(defn pack-into
-  "Pack objects to the destination, which must be a Packer or coercible to an InputStream."
-  [dest & objs]
-  (let [p (packer)]
-    (doseq [obj objs]
-      (pack-to obj p))
-    (.toByteArray s)))
 
-(defmethod pack-to Packer))
+(defprotocol Unwrapable
+  (unwrap [msgpack-obj]
+          "Unwrap one of the funky wrapper objects that msgpack uses."))
 
-(defn unpack [bytes]
+(extend-protocol Unwrapable
+  ArrayType
+  (unwrap [o] (into [] (map unwrap (.asArray o))))
+  BigIntegerTypeIMPL
+  (unwrap [o] (.asBigInteger o))
+  BooleanType
+  (unwrap [o] (.asBoolean o))
+  DoubleTypeIMPL
+  (unwrap [o] (.asDouble o))
+  FloatTypeIMPL
+  (unwrap [o] (.asFloat o))
+  IntegerType
+  (unwrap [o] (.asInt o))
+  LongIntegerTypeIMPL
+  (unwrap [o] (.asLong o))
+  MapType
+  (unwrap [o] (into {} (map (fn [[k v]] [(unwrap k) (unwrap v)]) (.asMap o))))
+  NilType
+  (unwrap [o] nil)
+  RawType
+  (unwrap [o] (-> o .asByteArray String.))
+  ShortIntegerTypeIMPL
+  (unwrap [o] (.asInt o))
   )
+
+(defn unpack [from]
+  (let [is (input-stream from) ; hmmm, can't use with-open here...
+        u (Unpacker. is)]
+    (map unwrap u)))
