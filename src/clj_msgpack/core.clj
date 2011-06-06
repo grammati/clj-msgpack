@@ -13,33 +13,33 @@
 (extend-protocol Packable
 
   nil
-  (pack-me [_ packer]
-    (.pack packer nil))
+  (pack-me [_ ^Packer packer]
+    (.packNil packer))
   
   clojure.lang.Keyword
-  (pack-me [kw packer]
+  (pack-me [kw ^Packer packer]
     (.pack packer (str \: (name kw)))) ; not round-trippable, but
                                        ; better than nothing.
   
   clojure.lang.Symbol
-  (pack-me [sym packer]
+  (pack-me [sym ^Packer packer]
     (.pack packer (name sym)))
 
   clojure.lang.Sequential
-  (pack-me [s packer]
+  (pack-me [s ^Packer packer]
     (.packArray packer (count s))
     (doseq [item s]
       (pack-me item packer)))
 
   clojure.lang.IPersistentMap
-  (pack-me [m packer]
+  (pack-me [m ^Packer packer]
     (.packMap packer (count m))
     (doseq [[k v] m]
       (pack-me k packer)
       (pack-me v packer)))
 
   Object
-  (pack-me [obj packer]
+  (pack-me [obj ^Packer packer]
     (.pack packer obj))
   
   )
