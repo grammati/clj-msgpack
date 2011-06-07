@@ -100,7 +100,7 @@
   NilType
   (unwrap [o] nil)
   RawType
-  (unwrap [o] (-> o .asByteArray String.))
+  (unwrap [o] (.asString o))
   ShortIntegerTypeIMPL
   (unwrap [o] (.asInt o))
   )
