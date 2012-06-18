@@ -1,4 +1,4 @@
-(defproject clj-msgpack "0.1.0"
+(defproject clj-msgpack "0.2.0"
   :description "Messagepack serialization library for Clojure."
   :dependencies [
     [org.clojure/clojure "1.4.0"]
