@@ -2,7 +2,7 @@
   :description "Messagepack serialization library for Clojure."
   :dependencies [
     [org.clojure/clojure "1.4.0"]
-    [org.msgpack/msgpack "0.5.2-devel"]
+    [org.msgpack/msgpack "0.6.6"]
     ]
   :repositories {"msgpack" "http://msgpack.org/maven2/"}
   )

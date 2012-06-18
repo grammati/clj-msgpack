@@ -1,5 +1,5 @@
 (ns clj-msgpack.test.core
-  (:use [clj-msgpack.core] :reload)
+  (:use [clj-msgpack pack unpack] :reload)
   (:use [clojure.test])
   (:use [clojure.java.io :only [input-stream output-stream]]))
 
@@ -47,4 +47,3 @@
       (apply pack-into f data-in))
     (let [data-out (unpack "./temp.dat")]
       (is (= data-in data-out)))))
-
