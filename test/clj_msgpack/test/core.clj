@@ -47,4 +47,3 @@
       (apply pack-into f data-in))
     (let [data-out (unpack "./temp.dat")]
       (is (= data-in data-out)))))
-
