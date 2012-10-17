@@ -41,6 +41,12 @@
     ;(prn (round-trip obj))
     (is (= obj (round-trip obj)))))
 
+(deftest test-round-trip-keyword-default
+  (is (= ":foo" (round-trip :foo))))
+
+(deftest test-round-trip-keyword-with-keywordization
+  (is (= :foo (binding [*keywordize-strings* true] (round-trip :foo)))))
+
 (deftest test-pack-to-file
   (let [data-in [{"yo" "dawg" 147 [true false]} "kldjfld" "kdajfkd" 37447]]
     (with-open [f (output-stream "./temp.dat")]

@@ -87,6 +87,10 @@
   (unwrap [msgpack-obj]
           "Unwrap one of the funky wrapper objects that msgpack uses."))
 
+(def ^:dynamic *keywordize-strings* 
+  "When true, unpack will convert strings that start with a colon into keywords."
+  false)
+
 (extend-protocol Unwrapable
   ;; Specialized unwraps
   BigIntegerValueImpl
@@ -110,7 +114,11 @@
   NilValue
   (unwrap [o] nil)
   RawValue
-  (unwrap [o] (.getString o)))
+  (unwrap [o]
+    (let [v (.getString o)]
+      (if (and *keywordize-strings* (.startsWith v ":"))
+        (keyword (.substring v 1))
+        v))))
 
 (defn unpack [from]
   (let [is (io/input-stream from) ; hmmm, can't use with-open here...
